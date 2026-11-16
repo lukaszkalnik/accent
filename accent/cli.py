@@ -66,7 +66,8 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--ipv4",
         action="store_true",
-        help="force IPv4 for downloads (use if downloads hang on a network with broken IPv6)",
+        help="force IPv4 for downloads (use if downloads hang on a network with broken IPv6; "
+        "or set ACCENT_IPV4=1)",
     )
     parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
     return parser
@@ -226,6 +227,7 @@ def render_text(result: dict, verbose: bool) -> str:
 
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
+    args.ipv4 = args.ipv4 or os.environ.get("ACCENT_IPV4") == "1"
     if args.ipv4:
         force_ipv4()
     try:
