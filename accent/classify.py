@@ -62,7 +62,7 @@ def display_name(label: str) -> str:
 
 def models_dir() -> Path:
     override = os.environ.get("ACCENT_MODEL_DIR")
-    return Path(override) if override else Path.home() / ".cache" / "accent-cli" / "models"
+    return Path(override) if override else Path.home() / ".cache" / "accent" / "models"
 
 
 def pick_device(requested: str = "auto") -> str:

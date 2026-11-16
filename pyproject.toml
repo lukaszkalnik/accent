@@ -3,7 +3,7 @@ requires = ["setuptools>=69"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "accent-cli"
+name = "accent"
 version = "0.1.0"
 description = "Identify the English accent of a speaker with SpeechBrain's CommonAccent models"
 readme = "README.md"

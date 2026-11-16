@@ -37,7 +37,7 @@ yt-dlp releases stop working. If YouTube downloads start failing, run `pip insta
 yt-dlp needs a JavaScript runtime (Deno, Node.js, Bun or QuickJS) on `PATH` to
 download from YouTube. The tool uses whichever one it finds.
 
-The first run downloads the model to `~/.cache/accent-cli/models` (ECAPA is about 80 MB,
+The first run downloads the model to `~/.cache/accent/models` (ECAPA is about 80 MB,
 XLSR about 2.5 GB). Set `ACCENT_MODEL_DIR` to put it somewhere else.
 
 ## Usage
