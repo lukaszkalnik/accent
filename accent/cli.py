@@ -169,17 +169,17 @@ def analyse(args: argparse.Namespace) -> dict:
             "start": round(offset + chunk.start, 2),
             "end": round(offset + chunk.end, 2),
             "rms_dbfs": None if chunk.rms_dbfs == float("-inf") else round(chunk.rms_dbfs, 1),
+            "speech_seconds": round(chunk.speech_seconds, 2),
             "silent": chunk.silent,
         }
         if not chunk.silent:
-            a, b = int(chunk.start * SAMPLE_RATE), int(chunk.end * SAMPLE_RATE)
-            probs = classifier.predict(samples[a:b])
+            probs = classifier.predict(chunk.speech(samples))  # silent frames trimmed
             per_chunk.append(probs)
             label, p = top_k(probs, classifier.labels, 1)[0]
             row.update(top_label=label, top_probability=round(p, 4))
         chunk_rows.append(row)
 
-    mean = average_probabilities(per_chunk, weights=[c.duration for c in speech])
+    mean = average_probabilities(per_chunk, weights=[c.speech_seconds for c in speech])
     result.update(
         device=classifier.device,
         top=[
@@ -191,7 +191,7 @@ def analyse(args: argparse.Namespace) -> dict:
         summary={
             "chunks": len(chunks),
             "silent_chunks": len(chunks) - len(speech),
-            "analysed_seconds": round(sum(c.duration for c in speech), 2),
+            "analysed_seconds": round(sum(c.speech_seconds for c in speech), 2),
         },
         note=NOTE,
     )
@@ -203,7 +203,7 @@ def render_text(result: dict, verbose: bool) -> str:
     lines = [
         f"Model:    {result['model']} ({result['device']})",
         "",
-        f"Top accents ({format_seconds(summary['analysed_seconds'])} of audio in "
+        f"Top accents ({format_seconds(summary['analysed_seconds'])} of speech in "
         f"{summary['chunks'] - summary['silent_chunks']} chunk(s), {summary['silent_chunks']} silent skipped):",
     ]
     width = max(len(t["name"]) for t in result["top"])
@@ -211,7 +211,7 @@ def render_text(result: dict, verbose: bool) -> str:
         lines.append(f"  {rank}. {t['name']:<{width}}  {t['probability'] * 100:5.1f}%")
 
     if verbose:
-        lines += ["", f"  {'#':>3}  {'Time':<15}  {'Level':>7}  Top accent"]
+        lines += ["", f"  {'#':>3}  {'Time':<15}  {'Level':>7}  {'Speech':>6}  Top accent"]
         for row in result["chunks"]:
             span = f"{format_seconds(row['start'])}-{format_seconds(row['end'])}"
             level = "-inf dB" if row["rms_dbfs"] is None else f"{row['rms_dbfs']:.0f} dB"
@@ -219,7 +219,8 @@ def render_text(result: dict, verbose: bool) -> str:
                 detail = "(silent, skipped)"
             else:
                 detail = f"{display_name(row['top_label'])} {row['top_probability'] * 100:.0f}%"
-            lines.append(f"  {row['index']:>3}  {span:<15}  {level:>7}  {detail}")
+            speech = f"{row['speech_seconds']:.0f} s"
+            lines.append(f"  {row['index']:>3}  {span:<15}  {level:>7}  {speech:>6}  {detail}")
 
     lines += ["", result["note"]]
     return "\n".join(lines)

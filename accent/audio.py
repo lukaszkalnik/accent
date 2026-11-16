@@ -1,4 +1,4 @@
-"""Audio helpers: ffmpeg detection, conversion to 16 kHz mono WAV, chunking, silence detection."""
+"""Audio helpers: ffmpeg detection, conversion to 16 kHz mono WAV, chunking, silence detection/trimming."""
 
 from __future__ import annotations
 
@@ -7,7 +7,7 @@ import shutil
 import subprocess
 import sys
 import wave
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 import numpy as np
@@ -17,8 +17,13 @@ CHUNK_SECONDS = 20.0
 # A trailing piece shorter than this is merged into the previous chunk, so the
 # model never sees a 1-second scrap on its own.
 MIN_TAIL_SECONDS = 5.0
-# Chunks whose RMS level is below this (dBFS) are treated as silence.
+# Chunks, and 30 ms frames inside chunks, whose RMS level is below this (dBFS) are silence.
 SILENCE_DBFS = -45.0
+FRAME_SECONDS = 0.03
+# Keep this much audio either side of every speech frame so word edges are not clipped.
+SPEECH_PAD_SECONDS = 0.2
+# A chunk with less speech than this (after trimming) is skipped.
+MIN_SPEECH_SECONDS = 1.0
 
 
 class AudioError(Exception):
@@ -102,10 +107,19 @@ class Chunk:
     end: float
     rms_dbfs: float
     silent: bool
+    speech_seconds: float = 0.0
+    # True for samples kept for classification (speech plus padding), relative to the chunk.
+    speech_mask: np.ndarray = field(default=None, repr=False, compare=False)
 
     @property
     def duration(self) -> float:
         return self.end - self.start
+
+    def speech(self, samples: np.ndarray, sample_rate: int = SAMPLE_RATE) -> np.ndarray:
+        """This chunk's audio with silent frames removed (samples = the whole signal)."""
+        a, b = int(round(self.start * sample_rate)), int(round(self.end * sample_rate))
+        piece = samples[a:b]
+        return piece if self.speech_mask is None else piece[self.speech_mask]
 
 
 def chunk_bounds(
@@ -133,22 +147,54 @@ def rms_dbfs(samples: np.ndarray) -> float:
     return float(20 * np.log10(rms)) if rms > 0 else float("-inf")
 
 
+def speech_mask(
+    samples: np.ndarray,
+    sample_rate: int = SAMPLE_RATE,
+    silence_dbfs: float = SILENCE_DBFS,
+    frame_seconds: float = FRAME_SECONDS,
+    pad_seconds: float = SPEECH_PAD_SECONDS,
+) -> np.ndarray:
+    """Per-sample mask: True where a frame is above the energy threshold, padded both sides."""
+    n = len(samples)
+    if n == 0:
+        return np.zeros(0, dtype=bool)
+    frame = max(1, int(round(frame_seconds * sample_rate)))
+    n_frames = -(-n // frame)
+    padded = np.zeros(n_frames * frame, dtype=np.float64)
+    padded[:n] = samples
+    power = np.mean(np.square(padded.reshape(n_frames, frame)), axis=1)
+    with np.errstate(divide="ignore"):
+        level = 10 * np.log10(power)
+    active = level >= silence_dbfs
+    reach = int(round(pad_seconds / frame_seconds))
+    if reach and active.any():
+        active = np.convolve(active, np.ones(2 * reach + 1), mode="same") > 0
+    return np.repeat(active, frame)[:n]
+
+
 def make_chunks(
     samples: np.ndarray,
     sample_rate: int = SAMPLE_RATE,
     chunk_seconds: float = CHUNK_SECONDS,
     silence_dbfs: float = SILENCE_DBFS,
+    min_speech_seconds: float = MIN_SPEECH_SECONDS,
 ) -> list[Chunk]:
+    """Split into chunks; flag silent ones and mark the speech frames inside the rest."""
+    mask = speech_mask(samples, sample_rate, silence_dbfs)
     chunks = []
     for i, (a, b) in enumerate(chunk_bounds(len(samples), sample_rate, chunk_seconds)):
         level = rms_dbfs(samples[a:b])
+        keep = mask[a:b]
+        speech = float(keep.sum()) / sample_rate
         chunks.append(
             Chunk(
                 index=i,
                 start=a / sample_rate,
                 end=b / sample_rate,
                 rms_dbfs=level,
-                silent=bool(level < silence_dbfs),
+                silent=bool(level < silence_dbfs or speech < min_speech_seconds),
+                speech_seconds=speech,
+                speech_mask=keep,
             )
         )
     return chunks

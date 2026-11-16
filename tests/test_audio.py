@@ -145,3 +145,49 @@ def test_require_ffmpeg_missing(monkeypatch):
     monkeypatch.setattr(audio.shutil, "which", lambda name: None)
     with pytest.raises(audio.AudioError, match="ffmpeg was not found"):
         audio.require_ffmpeg()
+
+
+# --- silence trimming inside chunks -------------------------------------------
+
+def test_speech_mask_marks_tone_and_pads_edges():
+    gap = np.zeros(2 * SAMPLE_RATE, np.float32)
+    signal = np.concatenate([gap, tone(1), gap])
+    mask = audio.speech_mask(signal)
+    assert mask.shape == signal.shape and mask.dtype == bool
+    kept = mask.sum() / SAMPLE_RATE
+    # 1 s of tone plus up to SPEECH_PAD_SECONDS (+ one frame) either side.
+    assert 1.0 + 2 * audio.SPEECH_PAD_SECONDS <= kept <= 1.0 + 2 * (audio.SPEECH_PAD_SECONDS + audio.FRAME_SECONDS)
+    assert not mask[: SAMPLE_RATE].any() and not mask[-SAMPLE_RATE:].any()
+    assert mask[2 * SAMPLE_RATE : 3 * SAMPLE_RATE].all()
+
+
+def test_speech_mask_edge_cases():
+    assert audio.speech_mask(np.zeros(0, np.float32)).size == 0
+    assert not audio.speech_mask(np.zeros(SAMPLE_RATE, np.float32)).any()
+    assert audio.speech_mask(tone(0.5)).all()
+
+
+def test_chunk_speech_drops_inner_silence():
+    signal = np.concatenate([tone(4), np.zeros(12 * SAMPLE_RATE, np.float32), tone(4)])
+    (chunk,) = make_chunks(signal)
+    assert not chunk.silent
+    assert chunk.speech_seconds == pytest.approx(8 + 2 * audio.SPEECH_PAD_SECONDS, abs=0.1)
+    speech = chunk.speech(signal)
+    assert len(speech) == int(chunk.speech_seconds * SAMPLE_RATE)
+    assert audio.rms_dbfs(speech) > audio.rms_dbfs(signal)
+
+
+def test_chunk_speech_uses_chunk_offsets():
+    signal = np.concatenate([np.zeros(20 * SAMPLE_RATE, np.float32), tone(20, amplitude=0.5)])
+    chunks = make_chunks(signal)
+    assert chunks[0].silent and not chunks[1].silent
+    assert np.array_equal(chunks[1].speech(signal), signal[20 * SAMPLE_RATE :])
+
+
+def test_chunk_with_too_little_speech_is_skipped():
+    # A loud 0.3 s click lifts the chunk RMS above the threshold but is not speech.
+    signal = np.concatenate([tone(0.3, amplitude=0.9), np.zeros(19 * SAMPLE_RATE, np.float32)])
+    (chunk,) = make_chunks(signal)
+    assert chunk.rms_dbfs > audio.SILENCE_DBFS
+    assert chunk.speech_seconds < audio.MIN_SPEECH_SECONDS
+    assert chunk.silent

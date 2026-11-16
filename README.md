@@ -12,7 +12,7 @@ Duration: 11:40
 Analysed: 0:00-10:00 (first 10 minutes only; use --full for the whole video)
 Model:    ecapa (mps)
 
-Top accents (10:00 of audio in 30 chunk(s), 0 silent skipped):
+Top accents (10:00 of speech in 30 chunk(s), 0 silent skipped):
   1. English (England)  100.0%
   2. American (US)        0.0%
   3. New Zealand          0.0%
@@ -72,8 +72,12 @@ accent "https://www.youtube.com/watch?v=QXX-uwQ-VGw" --start 5:00 --end 6:00   #
 2. The audio is split into 20-second chunks. A tail shorter than 5 s is merged into the
    previous chunk.
 3. Chunks whose RMS level is below -45 dBFS are skipped as silence.
-4. Each remaining chunk is classified. The final result is the average of the chunk
-   probabilities, weighted by chunk duration.
+4. Inside each remaining chunk, 30 ms frames below -45 dBFS are dropped, keeping 0.2 s
+   around speech so word edges survive. A chunk with less than 1 s of speech left is skipped.
+   Trimming matters: on the model cards' sample clips padded out to 20 s chunks with
+   silence, accuracy went from 8/13 to 12/13 (ECAPA) and 10/13 to 13/13 (XLSR).
+5. The trimmed speech in each chunk is classified. The final result is the average of the
+   chunk probabilities, weighted by each chunk's speech time.
 
 ### YouTube
 
