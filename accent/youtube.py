@@ -275,6 +275,7 @@ def fetch(
         )
         if begin > 0 or finish is not None:
             options["download_ranges"] = download_range_func(None, [(begin, finish if finish is not None else float("inf"))])
+            options["force_keyframes_at_cuts"] = True  # exact cuts; otherwise the section can start early
         with yt_dlp.YoutubeDL(options) as ydl:
             if raw is not None:
                 result = ydl.process_ie_result(raw, download=True)
