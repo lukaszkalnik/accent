@@ -234,6 +234,7 @@ def fetch(
     full: bool = False,
     use_cache: bool = True,
     ipv4: bool = False,
+    on_info=None,
 ) -> Download:
     """Fetch metadata and the best audio-only stream (just the needed section)."""
     import yt_dlp  # imported lazily: it is slow to import and only needed for URLs
@@ -259,6 +260,8 @@ def fetch(
             info_file.write_text(json.dumps(asdict(info)), encoding="utf-8")
 
         begin, finish, capped = plan_range(start, end, info.duration, full)
+        if on_info is not None:
+            on_info(info, begin, finish, capped)  # lets the CLI show the title before downloading
         key = cache_key(video_id, begin, finish)
         if use_cache and (hit := _cached_audio(cache_dir, key)):
             return Download(hit, info, begin, finish, capped, from_cache=True)

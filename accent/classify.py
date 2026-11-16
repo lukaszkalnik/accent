@@ -83,6 +83,8 @@ def pick_device(requested: str = "auto") -> str:
 
 
 def _quiet_libraries() -> None:
+    # SpeechBrain gives each logger the level in SB_LOG_LEVEL when it is first imported.
+    os.environ.setdefault("SB_LOG_LEVEL", "ERROR")
     warnings.filterwarnings("ignore")
     for name in ("speechbrain", "transformers", "huggingface_hub", "torch"):
         logging.getLogger(name).setLevel(logging.ERROR)
