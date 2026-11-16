@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import logging
 import os
-import sys
 import warnings
 from dataclasses import dataclass
 from pathlib import Path
@@ -128,10 +127,6 @@ class AccentClassifier:
 
     def load(self) -> None:
         _quiet_libraries()
-        from speechbrain.utils.fetching import LocalStrategy
-
-        # Windows needs admin rights or developer mode for symlinks; copy instead.
-        strategy = LocalStrategy.COPY if sys.platform == "win32" else LocalStrategy.SYMLINK
         savedir = models_dir() / self.spec.name
         run_opts = {"device": self.device}
         try:
@@ -142,7 +137,6 @@ class AccentClassifier:
                     source=self.spec.source,
                     savedir=str(savedir),
                     run_opts=run_opts,
-                    local_strategy=strategy,
                 )
             else:
                 from speechbrain.inference.interfaces import foreign_class
@@ -153,7 +147,6 @@ class AccentClassifier:
                     classname="CustomEncoderWav2vec2Classifier",
                     savedir=str(savedir),
                     run_opts=run_opts,
-                    local_strategy=strategy,
                     # The model's yaml would otherwise create ./wav2vec2_checkpoints in the cwd.
                     overrides={"wav2vec2": {"save_path": str(models_dir() / "wav2vec2_checkpoints")}},
                 )

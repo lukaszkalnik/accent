@@ -28,8 +28,6 @@ class AudioError(Exception):
 def ffmpeg_install_hint() -> str:
     if sys.platform == "darwin":
         return "Install it with: brew install ffmpeg"
-    if sys.platform == "win32":
-        return "Install it with: winget install Gyan.FFmpeg (then reopen the terminal)"
     return "Install it with your package manager, e.g.: sudo apt install ffmpeg"
 
 

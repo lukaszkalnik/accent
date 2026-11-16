@@ -22,12 +22,12 @@ Note: this is a statistical guess over a fixed set of 16 accent labels; mixed, r
 
 ## Install
 
-Needs Python 3.11+ and ffmpeg on `PATH` (`brew install ffmpeg` on macOS,
-`winget install Gyan.FFmpeg` on Windows, `sudo apt install ffmpeg` on Debian/Ubuntu).
+Runs on macOS and Linux (Windows is not supported). Needs Python 3.11+ and ffmpeg on
+`PATH` (`brew install ffmpeg` on macOS, `sudo apt install ffmpeg` on Debian/Ubuntu).
 
 ```bash
 python3 -m venv .venv
-source .venv/bin/activate          # Windows: .venv\Scripts\activate
+source .venv/bin/activate
 pip install -e ".[test]"
 ```
 
@@ -106,8 +106,3 @@ certainty.
 pytest                       # unit tests: no network, no model download
 pytest -m integration        # real model on a sample clip + a short public YouTube video
 ```
-
-## Windows
-
-The code avoids POSIX-only calls. On Windows SpeechBrain copies model files instead of
-symlinking them, because symlinks need admin rights or Developer Mode.
