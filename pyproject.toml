@@ -1,0 +1,37 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "accent-cli"
+version = "0.1.0"
+description = "Identify the English accent of a speaker with SpeechBrain's CommonAccent models"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "speechbrain==1.1.2",
+    "torch==2.15.0",
+    "torchaudio==2.11.1",
+    "transformers==5.23.0",
+    "huggingface-hub==2.4.0",
+    "numpy==2.4.6",
+    # Deliberately unpinned: YouTube changes often and old yt-dlp releases stop
+    # working. The [default] extra pulls in yt-dlp-ejs for YouTube's JS challenges.
+    "yt-dlp[default]>=2026.10.26",
+]
+
+[project.optional-dependencies]
+test = ["pytest==9.2.0"]
+
+[project.scripts]
+accent = "accent.cli:main"
+
+[tool.setuptools]
+packages = ["accent"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+    "integration: needs network and downloads a model or video (run with -m integration)",
+]
+addopts = "-m 'not integration'"

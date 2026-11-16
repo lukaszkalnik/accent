@@ -1,0 +1,16 @@
+# Virtual environment
+.venv/
+
+# Downloaded YouTube audio (keyed by video ID and time range)
+.cache/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.pytest_cache/
+
+# OS
+.DS_Store
