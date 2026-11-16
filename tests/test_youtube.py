@@ -159,6 +159,7 @@ def test_cache_key():
         ("ERROR: [youtube] abc: Sign in to confirm your age. This video may be inappropriate for some users.", "age-restricted"),
         ("ERROR: [youtube] abc: The uploader has not made this video available in your country", "region"),
         ("ERROR: [youtube] abc: Video unavailable. This video has been removed by the uploader", "unavailable"),
+        ("ERROR: [youtube] abc: This video is unavailable", "removed, deleted or never existed"),
         ("ERROR: [youtube] abc: This live event will begin in 3 hours.", "Live streams"),
         ("ERROR: [youtube] abc: Unable to download webpage: <urlopen error [Errno 8] nodename nor servname provided, or not known>", "Network error"),
         ("ERROR: [youtube] abc: Unable to download API page: [Errno 61] Connection refused", "Network error"),

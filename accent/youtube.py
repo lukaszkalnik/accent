@@ -104,7 +104,7 @@ def explain_error(message: str) -> str:
         return "This video is blocked in your region."
     if "live event will begin" in low or "premieres in" in low or "is live" in low:
         return "Live streams and upcoming premieres are not supported; pass a finished video."
-    if "removed" in low or "terminated" in low or "video unavailable" in low or "does not exist" in low or "no longer available" in low:
+    if "removed" in low or "terminated" in low or "video unavailable" in low or "video is unavailable" in low or "does not exist" in low or "no longer available" in low:
         return "This video is unavailable (removed, deleted or never existed)."
     if "not a bot" in low:
         return f"YouTube asked to confirm this is not a bot and refused the download. {UPGRADE_HINT}"
